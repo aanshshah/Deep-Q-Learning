@@ -649,7 +649,7 @@ if not TRAIN:
             # atari.env.render()
             if terminal_life_lost:
                   action = 1
-                else:
+            else:
                   action,q_score = explore_exploit_sched.get_action(sess, frame_number,atari.state, evaluation=True)
             # action = 1 if terminal_life_lost else explore_exploit_sched.get_action(sess, 0, atari.state,  
             #                                                                        evaluation = True)
