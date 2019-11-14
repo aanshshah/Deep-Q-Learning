@@ -91,19 +91,22 @@ class DQN(object):
             kernel_initializer=tf.variance_scaling_initializer(scale=2),
             padding="valid", activation=tf.nn.relu, use_bias=False, name='conv4')
         
-        # Splitting into value and advantage stream
-        self.valuestream, self.advantagestream = tf.split(self.conv4, 2, 3)
-        self.valuestream = tf.layers.flatten(self.valuestream)
-        self.advantagestream = tf.layers.flatten(self.advantagestream)
-        self.advantage = tf.layers.dense(
-            inputs=self.advantagestream, units=self.n_actions,
-            kernel_initializer=tf.variance_scaling_initializer(scale=2), name="advantage")
-        self.value = tf.layers.dense(
-            inputs=self.valuestream, units=1, 
-            kernel_initializer=tf.variance_scaling_initializer(scale=2), name='value')
+        # # Splitting into value and advantage stream
+        # self.valuestream, self.advantagestream = tf.split(self.conv4, 2, 3)
+        # self.valuestream = tf.layers.flatten(self.valuestream)
+        # self.advantagestream = tf.layers.flatten(self.advantagestream)
+        # self.advantage = tf.layers.dense(
+        #     inputs=self.advantagestream, units=self.n_actions,
+        #     kernel_initializer=tf.variance_scaling_initializer(scale=2), name="advantage")
+        # self.value = tf.layers.dense(
+        #     inputs=self.valuestream, units=1, 
+        #     kernel_initializer=tf.variance_scaling_initializer(scale=2), name='value')
+        self.valuestream = tf.layers.flatten(self.conv4)
+        self.value = tf.layers.dense(inputs=self.valuestream, units=self.n_actions, kernel_initializer=tf.variance_scaling_initializer(scale=2), name='value')
+
         
         # Combining value and advantage into Q-values as described above
-        self.q_values = self.value + tf.subtract(self.advantage, tf.reduce_mean(self.advantage, axis=1, keepdims=True))
+        self.q_values = self.value #+ tf.subtract(self.advantage, tf.reduce_mean(self.advantage, axis=1, keepdims=True))
         self.best_action = tf.argmax(self.q_values, 1)
         # self.avg_q = tf.reduce_mean(self.q_values)
         
