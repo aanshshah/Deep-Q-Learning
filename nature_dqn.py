@@ -467,8 +467,7 @@ saver = tf.train.Saver()
 MAIN_DQN_VARS = tf.trainable_variables(scope='mainDQN')
 TARGET_DQN_VARS = tf.trainable_variables(scope='targetDQN')
 
-LAYER_IDS = ["conv1", "conv2", "conv3", "conv4", "denseAdvantage", 
-             "denseAdvantageBias", "denseValue", "denseValueBias"]
+LAYER_IDS = ["conv1", "conv2", "conv3", "conv4", "denseValue", "denseValueBias"]
 
 # Scalar summaries for tensorboard: loss, average reward and evaluation score
 with tf.name_scope('Performance'):
