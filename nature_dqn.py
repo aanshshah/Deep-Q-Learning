@@ -507,8 +507,7 @@ def train():
         rewards = []
         loss_list = []
         num_epochs = 0
-        while num_epochs < TRAIN_EPOCHS:
-            
+        for _ in range(TRAIN_EPOCHS):
             ########################
             ####### Training #######
             ########################
@@ -577,7 +576,7 @@ def train():
             evaluate_frame_number = 0
             q_values = []
             episode_counter = 0
-            while episode_counter < 30:
+            for _ in range(30): #while episode_counter < 30:
                 for _ in range(MAX_EPISODE_LENGTH):
                     if terminal:
                         terminal_life_lost = atari.reset(sess, evaluation=True)
