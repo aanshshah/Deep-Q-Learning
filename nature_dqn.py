@@ -563,7 +563,7 @@ def train():
                     SUMM_WRITER.add_summary(summ_param, frame_number)
                     
                     print(len(rewards), frame_number, np.mean(rewards[-100:]))
-                    with open('rewards.dat', 'a') as reward_file:
+                    with open('rewards_2.dat', 'a') as reward_file:
                         print(len(rewards), frame_number, 
                               np.mean(rewards[-100:]), file=reward_file)
             
@@ -606,7 +606,7 @@ def train():
             print("Evaluation score:\n", np.mean(eval_rewards))
             mean_reward = np.mean(eval_rewards)
             mean_q = np.mean(q_values)
-            with open('mean_q_test_score.csv', 'a') as q_reward_file:
+            with open('mean_q_test_score_2.csv', 'a') as q_reward_file:
                 print(mean_reward, mean_q, file=q_reward_file)
             try:
                 generate_gif(frame_number, frames_for_gif, eval_rewards[0], PATH)
@@ -620,8 +620,8 @@ def train():
             # Show the evaluation score in tensorboard
             summ = sess.run(EVAL_SCORE_SUMMARY, feed_dict={EVAL_SCORE_PH:np.mean(eval_rewards)})
             SUMM_WRITER.add_summary(summ, frame_number)
-            with open('rewardsEval.dat', 'a') as eval_reward_file:
-                print(frame_number, np.mean(eval_rewards), file=eval_reward_file)
+            with open('rewardsEval_2.dat', 'a') as eval_reward_file:
+                print(frame_number, np.mean(eval_rewards), mean_q, file=eval_reward_file)
 
 if TRAIN:
     train()
