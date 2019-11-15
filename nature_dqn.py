@@ -578,30 +578,31 @@ def train():
             q_values = []
             episode_counter = 0
             while episode_counter < 30:
-            # for _ in range(EVAL_STEPS):
-                if terminal:
-                    terminal_life_lost = atari.reset(sess, evaluation=True)
-                    episode_reward_sum = 0
-                    terminal = False
-                    episode_counter += 1
-               
-                # Fire (action 1), when a life was lost or the game just started, 
-                # so that the agent does not stand around doing nothing. When playing 
-                # with other environments, you might want to change this...
-                if terminal_life_lost:
-                  action = 1
-                else:
-                  action,q_score = explore_exploit_sched.get_action(sess, frame_number,atari.state, evaluation=True)
-                  q_values.append(q_score)
-                processed_new_frame, reward, terminal, terminal_life_lost, new_frame = atari.step(sess, action)
-                evaluate_frame_number += 1
-                episode_reward_sum += reward
+                for _ in range(MAX_EPISODE_LENGTH):
+                    if terminal:
+                        terminal_life_lost = atari.reset(sess, evaluation=True)
+                        episode_reward_sum = 0
+                        terminal = False
+                        episode_counter += 1
+                        break
+                   
+                    # Fire (action 1), when a life was lost or the game just started, 
+                    # so that the agent does not stand around doing nothing. When playing 
+                    # with other environments, you might want to change this...
+                    if terminal_life_lost:
+                      action = 1
+                    else:
+                      action,q_score = explore_exploit_sched.get_action(sess, frame_number,atari.state, evaluation=True)
+                      q_values.append(q_score)
+                    processed_new_frame, reward, terminal, terminal_life_lost, new_frame = atari.step(sess, action)
+                    evaluate_frame_number += 1
+                    episode_reward_sum += reward
 
-                if gif: 
-                    frames_for_gif.append(new_frame)
-                if terminal:
-                    eval_rewards.append(episode_reward_sum)
-                    gif = False # Save only the first game of the evaluation as a gif
+                    if gif: 
+                        frames_for_gif.append(new_frame)
+                    if terminal:
+                        eval_rewards.append(episode_reward_sum)
+                        gif = False # Save only the first game of the evaluation as a gif
                      
             print("Evaluation score:\n", np.mean(eval_rewards))
             mean_reward = np.mean(eval_rewards)
