@@ -429,9 +429,9 @@ NETW_UPDATE_FREQ = 10000         # Number of chosen actions between updating the
 DISCOUNT_FACTOR = 0.99           # gamma in the Bellman equation
 REPLAY_MEMORY_START_SIZE = 50000 # Number of completely random actions, 
                                  # before the agent starts learning
-MAX_FRAMES = 30000000            # Total number of frames the agent sees 
+MAX_FRAMES = 250000              # Total number of frames the agent sees 
 MEMORY_SIZE = 1000000            # Number of transitions stored in the replay memory
-NO_OP_STEPS = 10                 # Number of 'NOOP' or 'FIRE' actions at the beginning of an 
+NO_OP_STEPS = 30                 # Number of 'NOOP' or 'FIRE' actions at the beginning of an 
                                  # evaluation episode
 UPDATE_FREQ = 4                  # Every four actions a gradient descend step is performed
 HIDDEN = 1024                    # Number of filters in the final convolutional layer. The output 
@@ -440,9 +440,10 @@ HIDDEN = 1024                    # Number of filters in the final convolutional 
                                  # (1,1,512). This is slightly different from the original 
                                  # implementation but tests I did with the environment Pong 
                                  # have shown that this way the score increases more quickly
-LEARNING_RATE = 0.00001          # Set to 0.00025 in Pong for quicker results. 
+LEARNING_RATE = 0.00025          # Set to 0.00025 in Pong for quicker results. 
                                  # Hessel et al. 2017 used 0.0000625
 BS = 32                          # Batch size
+TRAIN_EPOCHS = 40
 
 PATH = "output/"                 # Gifs and checkpoints will be saved here
 SUMMARIES = "summaries"          # logdir for tensorboard
@@ -505,14 +506,14 @@ def train():
         frame_number = 0
         rewards = []
         loss_list = []
-        
-        while frame_number < MAX_FRAMES:
+        num_epochs = 0
+        while num_epochs < TRAIN_EPOCHS:
             
             ########################
             ####### Training #######
             ########################
             epoch_frame = 0
-            while epoch_frame < EVAL_FREQUENCY:
+            while frame_number < MAX_FRAMES:
                 terminal_life_lost = atari.reset(sess)
                 episode_reward_sum = 0
                 for _ in range(MAX_EPISODE_LENGTH):
@@ -542,6 +543,7 @@ def train():
                     
                     if terminal:
                         terminal = False
+                        num_epochs += 1
                         break
 
                 rewards.append(episode_reward_sum)
