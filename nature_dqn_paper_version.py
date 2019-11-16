@@ -429,7 +429,7 @@ NETW_UPDATE_FREQ = 10000         # Number of chosen actions between updating the
 DISCOUNT_FACTOR = 0.99           # gamma in the Bellman equation
 REPLAY_MEMORY_START_SIZE = 50000 # Number of completely random actions, 
                                  # before the agent starts learning
-MAX_FRAMES = 10000000            # Total number of frames the agent sees 
+MAX_FRAMES = 250000            # Total number of frames the agent sees 
 MEMORY_SIZE = 1000000            # Number of transitions stored in the replay memory
 NO_OP_STEPS = 30                 # Number of 'NOOP' or 'FIRE' actions at the beginning of an 
                                  # evaluation episode
@@ -505,121 +505,122 @@ def train():
         frame_number = 0
         rewards = []
         loss_list = []
-        
-        while frame_number < MAX_FRAMES:
+        for _ in range(40):
             
-            ########################
-            ####### Training #######
-            ########################
-            epoch_frame = 0
-            while epoch_frame < EVAL_FREQUENCY:
-                terminal_life_lost = atari.reset(sess)
-                episode_reward_sum = 0
-                for _ in range(MAX_EPISODE_LENGTH):
-                    # (4★)
-                    action,q_score = explore_exploit_sched.get_action(sess, frame_number, atari.state)   
-                    # (5★)
-                    processed_new_frame, reward, terminal, terminal_life_lost, _ = atari.step(sess, action)  
-                    frame_number += 1
-                    epoch_frame += 1
-                    episode_reward_sum += reward
-                    
-                    # Clip the reward
-                    clipped_reward = clip_reward(reward)
-                    
-                    # (7★) Store transition in the replay memory
-                    my_replay_memory.add_experience(action=action, 
-                                                    frame=processed_new_frame[:, :, 0],
-                                                    reward=clipped_reward, 
-                                                    terminal=terminal_life_lost)   
-                    
-                    if frame_number % UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
-                        loss = learn(sess, my_replay_memory, MAIN_DQN, TARGET_DQN,
-                                     BS, gamma = DISCOUNT_FACTOR) # (8★)
-                        loss_list.append(loss)
-                    if frame_number % NETW_UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
-                        update_networks(sess) # (9★)
-                    
-                    if terminal:
-                        terminal = False
-                        break
-
-                rewards.append(episode_reward_sum)
+            while frame_number < MAX_FRAMES:
                 
-                # Output the progress:
-                if len(rewards) % 10 == 0:
-                    # Scalar summaries for tensorboard
-                    if frame_number > REPLAY_MEMORY_START_SIZE:
-                        summ = sess.run(PERFORMANCE_SUMMARIES, 
-                                        feed_dict={LOSS_PH:np.mean(loss_list), 
-                                                   REWARD_PH:np.mean(rewards[-100:])})
-                        
-                        SUMM_WRITER.add_summary(summ, frame_number)
-                        loss_list = []
-                    # Histogramm summaries for tensorboard
-                    summ_param = sess.run(PARAM_SUMMARIES)
-                    SUMM_WRITER.add_summary(summ_param, frame_number)
-                    
-                    print(len(rewards), frame_number, np.mean(rewards[-100:]))
-                    with open('rewards_2.dat', 'a') as reward_file:
-                        print(len(rewards), frame_number, 
-                              np.mean(rewards[-100:]), file=reward_file)
-            
-            ########################
-            ###### Evaluation ######
-            ########################
-            terminal = True
-            gif = True
-            frames_for_gif = []
-            eval_rewards = []
-            evaluate_frame_number = 0
-            q_values = []
-            episode_counter = 0
-            while episode_counter < 30:
-            # for _ in range(EVAL_STEPS):
-                if terminal:
-                    terminal_life_lost = atari.reset(sess, evaluation=True)
+                ########################
+                ####### Training #######
+                ########################
+                epoch_frame = 0
+                while epoch_frame < EVAL_FREQUENCY:
+                    terminal_life_lost = atari.reset(sess)
                     episode_reward_sum = 0
-                    terminal = False
-                    episode_counter += 1
-               
-                # Fire (action 1), when a life was lost or the game just started, 
-                # so that the agent does not stand around doing nothing. When playing 
-                # with other environments, you might want to change this...
-                if terminal_life_lost:
-                  action = 1
-                else:
-                  action,q_score = explore_exploit_sched.get_action(sess, frame_number,atari.state, evaluation=True)
-                  q_values.append(q_score)
-                processed_new_frame, reward, terminal, terminal_life_lost, new_frame = atari.step(sess, action)
-                evaluate_frame_number += 1
-                episode_reward_sum += reward
+                    for _ in range(MAX_EPISODE_LENGTH):
+                        # (4★)
+                        action,q_score = explore_exploit_sched.get_action(sess, frame_number, atari.state)   
+                        # (5★)
+                        processed_new_frame, reward, terminal, terminal_life_lost, _ = atari.step(sess, action)  
+                        frame_number += 1
+                        epoch_frame += 1
+                        episode_reward_sum += reward
+                        
+                        # Clip the reward
+                        clipped_reward = clip_reward(reward)
+                        
+                        # (7★) Store transition in the replay memory
+                        my_replay_memory.add_experience(action=action, 
+                                                        frame=processed_new_frame[:, :, 0],
+                                                        reward=clipped_reward, 
+                                                        terminal=terminal_life_lost)   
+                        
+                        if frame_number % UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
+                            loss = learn(sess, my_replay_memory, MAIN_DQN, TARGET_DQN,
+                                         BS, gamma = DISCOUNT_FACTOR) # (8★)
+                            loss_list.append(loss)
+                        if frame_number % NETW_UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
+                            update_networks(sess) # (9★)
+                        
+                        if terminal:
+                            terminal = False
+                            break
 
-                if gif: 
-                    frames_for_gif.append(new_frame)
-                if terminal:
-                    eval_rewards.append(episode_reward_sum)
-                    gif = False # Save only the first game of the evaluation as a gif
-                     
-            print("Evaluation score:\n", np.mean(eval_rewards))
-            mean_reward = np.mean(eval_rewards)
-            mean_q = np.mean(q_values)
-            with open('mean_q_test_score_2.csv', 'a') as q_reward_file:
-                print(mean_reward, mean_q, file=q_reward_file)
-            try:
-                generate_gif(frame_number, frames_for_gif, eval_rewards[0], PATH)
-            except IndexError:
-                print("No evaluation game finished")
-            
-            #Save the network parameters
-            saver.save(sess, PATH+'/my_model', global_step=frame_number)
-            frames_for_gif = []
-            
-            # Show the evaluation score in tensorboard
-            summ = sess.run(EVAL_SCORE_SUMMARY, feed_dict={EVAL_SCORE_PH:np.mean(eval_rewards)})
-            SUMM_WRITER.add_summary(summ, frame_number)
-            with open('rewardsEval_2.dat', 'a') as eval_reward_file:
-                print(frame_number, np.mean(eval_rewards), file=eval_reward_file)
+                    rewards.append(episode_reward_sum)
+                    
+                    # Output the progress:
+                    if len(rewards) % 10 == 0:
+                        # Scalar summaries for tensorboard
+                        if frame_number > REPLAY_MEMORY_START_SIZE:
+                            summ = sess.run(PERFORMANCE_SUMMARIES, 
+                                            feed_dict={LOSS_PH:np.mean(loss_list), 
+                                                       REWARD_PH:np.mean(rewards[-100:])})
+                            
+                            SUMM_WRITER.add_summary(summ, frame_number)
+                            loss_list = []
+                        # Histogramm summaries for tensorboard
+                        summ_param = sess.run(PARAM_SUMMARIES)
+                        SUMM_WRITER.add_summary(summ_param, frame_number)
+                        
+                        print(len(rewards), frame_number, np.mean(rewards[-100:]))
+                        with open('rewards_2.dat', 'a') as reward_file:
+                            print(len(rewards), frame_number, 
+                                  np.mean(rewards[-100:]), file=reward_file)
+                
+                ########################
+                ###### Evaluation ######
+                ########################
+                terminal = True
+                gif = True
+                frames_for_gif = []
+                eval_rewards = []
+                evaluate_frame_number = 0
+                q_values = []
+                episode_counter = 0
+                while episode_counter < 30:
+                # for _ in range(EVAL_STEPS):
+                    if terminal:
+                        terminal_life_lost = atari.reset(sess, evaluation=True)
+                        episode_reward_sum = 0
+                        terminal = False
+                        episode_counter += 1
+                   
+                    # Fire (action 1), when a life was lost or the game just started, 
+                    # so that the agent does not stand around doing nothing. When playing 
+                    # with other environments, you might want to change this...
+                    if terminal_life_lost:
+                      action = 1
+                    else:
+                      action,q_score = explore_exploit_sched.get_action(sess, frame_number,atari.state, evaluation=True)
+                      q_values.append(q_score)
+                    processed_new_frame, reward, terminal, terminal_life_lost, new_frame = atari.step(sess, action)
+                    evaluate_frame_number += 1
+                    episode_reward_sum += reward
+
+                    if gif: 
+                        frames_for_gif.append(new_frame)
+                    if terminal:
+                        eval_rewards.append(episode_reward_sum)
+                        gif = False # Save only the first game of the evaluation as a gif
+                         
+                print("Evaluation score:\n", np.mean(eval_rewards))
+                mean_reward = np.mean(eval_rewards)
+                mean_q = np.mean(q_values)
+                with open('mean_q_test_score_2.csv', 'a') as q_reward_file:
+                    print(mean_reward, mean_q, file=q_reward_file)
+                try:
+                    generate_gif(frame_number, frames_for_gif, eval_rewards[0], PATH)
+                except IndexError:
+                    print("No evaluation game finished")
+                
+                #Save the network parameters
+                saver.save(sess, PATH+'/my_model', global_step=frame_number)
+                frames_for_gif = []
+                
+                # Show the evaluation score in tensorboard
+                summ = sess.run(EVAL_SCORE_SUMMARY, feed_dict={EVAL_SCORE_PH:np.mean(eval_rewards)})
+                SUMM_WRITER.add_summary(summ, frame_number)
+                with open('rewardsEval_2.dat', 'a') as eval_reward_file:
+                    print(frame_number, np.mean(eval_rewards), file=eval_reward_file)
 
 if TRAIN:
     train()
