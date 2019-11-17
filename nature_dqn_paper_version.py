@@ -128,7 +128,7 @@ class DQN(object):
 class ExplorationExploitationScheduler(object):
     """Determines an action according to an epsilon greedy strategy with annealing epsilon"""
     def __init__(self, DQN, n_actions, eps_initial=1, eps_final=0.1, eps_final_frame=0.01, 
-                 eps_evaluation=0.0, eps_annealing_frames=1000000, 
+                 eps_evaluation=0.05, eps_annealing_frames=1000000, 
                  replay_memory_start_size=50000, max_frames=25000000):
         """
         Args:
@@ -513,58 +513,58 @@ def train():
                 ####### Training #######
                 ########################
                 epoch_frame = 0
-                while epoch_frame < EVAL_FREQUENCY:
-                    terminal_life_lost = atari.reset(sess)
-                    episode_reward_sum = 0
-                    for _ in range(MAX_EPISODE_LENGTH):
-                        # (4★)
-                        action,q_score = explore_exploit_sched.get_action(sess, frame_number, atari.state)   
-                        # (5★)
-                        processed_new_frame, reward, terminal, terminal_life_lost, _ = atari.step(sess, action)  
-                        frame_number += 1
-                        epoch_frame += 1
-                        episode_reward_sum += reward
-                        
-                        # Clip the reward
-                        clipped_reward = clip_reward(reward)
-                        
-                        # (7★) Store transition in the replay memory
-                        my_replay_memory.add_experience(action=action, 
-                                                        frame=processed_new_frame[:, :, 0],
-                                                        reward=clipped_reward, 
-                                                        terminal=terminal_life_lost)   
-                        
-                        if frame_number % UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
-                            loss = learn(sess, my_replay_memory, MAIN_DQN, TARGET_DQN,
-                                         BS, gamma = DISCOUNT_FACTOR) # (8★)
-                            loss_list.append(loss)
-                        if frame_number % NETW_UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
-                            update_networks(sess) # (9★)
-                        
-                        if terminal:
-                            terminal = False
-                            break
-
-                    rewards.append(episode_reward_sum)
+                # while epoch_frame < EVAL_FREQUENCY:
+                terminal_life_lost = atari.reset(sess)
+                episode_reward_sum = 0
+                for _ in range(MAX_EPISODE_LENGTH):
+                    # (4★)
+                    action,q_score = explore_exploit_sched.get_action(sess, frame_number, atari.state)   
+                    # (5★)
+                    processed_new_frame, reward, terminal, terminal_life_lost, _ = atari.step(sess, action)  
+                    frame_number += 1
+                    epoch_frame += 1
+                    episode_reward_sum += reward
                     
-                    # Output the progress:
-                    if len(rewards) % 10 == 0:
-                        # Scalar summaries for tensorboard
-                        if frame_number > REPLAY_MEMORY_START_SIZE:
-                            summ = sess.run(PERFORMANCE_SUMMARIES, 
-                                            feed_dict={LOSS_PH:np.mean(loss_list), 
-                                                       REWARD_PH:np.mean(rewards[-100:])})
-                            
-                            SUMM_WRITER.add_summary(summ, frame_number)
-                            loss_list = []
-                        # Histogramm summaries for tensorboard
-                        summ_param = sess.run(PARAM_SUMMARIES)
-                        SUMM_WRITER.add_summary(summ_param, frame_number)
+                    # Clip the reward
+                    clipped_reward = clip_reward(reward)
+                    
+                    # (7★) Store transition in the replay memory
+                    my_replay_memory.add_experience(action=action, 
+                                                    frame=processed_new_frame[:, :, 0],
+                                                    reward=clipped_reward, 
+                                                    terminal=terminal_life_lost)   
+                    
+                    if frame_number % UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
+                        loss = learn(sess, my_replay_memory, MAIN_DQN, TARGET_DQN,
+                                     BS, gamma = DISCOUNT_FACTOR) # (8★)
+                        loss_list.append(loss)
+                    if frame_number % NETW_UPDATE_FREQ == 0 and frame_number > REPLAY_MEMORY_START_SIZE:
+                        update_networks(sess) # (9★)
+                    
+                    if terminal:
+                        terminal = False
+                        break
+
+                rewards.append(episode_reward_sum)
+                
+                # Output the progress:
+                if len(rewards) % 10 == 0:
+                    # Scalar summaries for tensorboard
+                    if frame_number > REPLAY_MEMORY_START_SIZE:
+                        summ = sess.run(PERFORMANCE_SUMMARIES, 
+                                        feed_dict={LOSS_PH:np.mean(loss_list), 
+                                                   REWARD_PH:np.mean(rewards[-100:])})
                         
-                        print(len(rewards), frame_number, np.mean(rewards[-100:]))
-                        with open('rewards_2.dat', 'a') as reward_file:
-                            print(len(rewards), frame_number, 
-                                  np.mean(rewards[-100:]), file=reward_file)
+                        SUMM_WRITER.add_summary(summ, frame_number)
+                        loss_list = []
+                    # Histogramm summaries for tensorboard
+                    summ_param = sess.run(PARAM_SUMMARIES)
+                    SUMM_WRITER.add_summary(summ_param, frame_number)
+                    
+                    print(len(rewards), frame_number, np.mean(rewards[-100:]))
+                    with open('rewards_2.dat', 'a') as reward_file:
+                        print(len(rewards), frame_number, 
+                              np.mean(rewards[-100:]), file=reward_file)
                 
                 ########################
                 ###### Evaluation ######
